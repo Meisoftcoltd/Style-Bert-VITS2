@@ -28,3 +28,5 @@ tensorboard
 torch>=2.1
 transformers
 umap-learn
+huggingface_hub
+av
