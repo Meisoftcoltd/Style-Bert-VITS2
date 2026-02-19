@@ -65,6 +65,7 @@ def load_model(
     - 日本語: ku-nlp/deberta-v2-large-japanese-char-wwm
     - 英語: microsoft/deberta-v3-large
     - 中国語: hfl/chinese-roberta-wwm-ext-large
+    - スペイン語: PlanTL-GOB-ES/roberta-large-bne
 
     Args:
         language (Languages): ロードする学習済みモデルの対象言語
@@ -134,6 +135,7 @@ def load_tokenizer(
     - 日本語: ku-nlp/deberta-v2-large-japanese-char-wwm
     - 英語: microsoft/deberta-v3-large
     - 中国語: hfl/chinese-roberta-wwm-ext-large
+    - スペイン語: PlanTL-GOB-ES/roberta-large-bne
 
     Args:
         language (Languages): ロードする学習済みモデルの対象言語

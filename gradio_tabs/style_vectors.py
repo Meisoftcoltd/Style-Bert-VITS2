@@ -100,17 +100,15 @@ def do_dbscan(eps=2.5, min_samples=15):
 
 
 def representative_wav_files(cluster_id, num_files=1):
-    # y_predの中でcluster_indexに関するメドイドを探す
+    # Find medoid for cluster_index in y_pred
     cluster_indices = np.where(y_pred == cluster_id)[0]
     cluster_vectors = x[cluster_indices]
-    # クラスタ内の全ベクトル間の距離を計算
+
     distances = pdist(cluster_vectors)
     distance_matrix = squareform(distances)
 
-    # 各ベクトルと他の全ベクトルとの平均距離を計算
     mean_distances = distance_matrix.mean(axis=1)
 
-    # 平均距離が最も小さい順にnum_files個のインデックスを取得
     closest_indices = np.argsort(mean_distances)[:num_files]
 
     return cluster_indices[closest_indices]
@@ -144,18 +142,17 @@ def do_dbscan_gradio(eps=2.5, min_samples=15):
     n_clusters = int(max(y_pred) + 1)
 
     if n_clusters > MAX_CLUSTER_NUM:
-        # raise ValueError(f"The number of clusters is too large: {n_clusters}")
         return [
             plt,
             gr.Slider(maximum=MAX_CLUSTER_NUM),
-            f"クラスタ数が多すぎます、パラメータを変えてみてください。: {n_clusters}",
+            f"Demasiados clústeres, intente cambiar los parámetros: {n_clusters}",
         ] + [gr.Audio(visible=False)] * MAX_AUDIO_NUM
 
     elif n_clusters == 0:
         return [
             plt,
             gr.Slider(maximum=MAX_CLUSTER_NUM),
-            "クラスタが数が0です。パラメータを変えてみてください。",
+            "El número de clústeres es 0. Intente cambiar los parámetros.",
         ] + [gr.Audio(visible=False)] * MAX_AUDIO_NUM
 
     return [plt, gr.Slider(maximum=n_clusters, value=1), n_clusters] + [
@@ -164,9 +161,9 @@ def do_dbscan_gradio(eps=2.5, min_samples=15):
 
 
 def representative_wav_files_gradio(cluster_id, num_files=1):
-    cluster_id = cluster_id - 1  # UIでは1から始まるので0からにする
+    cluster_id = cluster_id - 1
     closest_indices = representative_wav_files(cluster_id, num_files)
-    actual_num_files = len(closest_indices)  # ファイル数が少ないときのため
+    actual_num_files = len(closest_indices)
     return [
         gr.Audio(wav_files[i], visible=True, label=str(wav_files[i]))
         for i in closest_indices
@@ -209,13 +206,13 @@ def save_style_vectors_from_clustering(model_name: str, style_names_str: str):
     # config.jsonの更新
     config_path = result_dir / "config.json"
     if not config_path.exists():
-        return f"{config_path}が存在しません。"
+        return f"{config_path} no existe."
     style_names = [name.strip() for name in style_names_str.split(",")]
     style_name_list = [DEFAULT_STYLE] + style_names
     if len(style_name_list) != len(centroids) + 1:
-        return f"スタイルの数が合いません。`,`で正しく{len(centroids)}個に区切られているか確認してください: {style_names_str}"
+        return f"El número de estilos no coincide. Verifique que estén separados por `,` y sean {len(centroids)}: {style_names_str}"
     if len(set(style_names)) != len(style_names):
-        return "スタイル名が重複しています。"
+        return "Los nombres de estilo están duplicados."
 
     logger.info(f"Backup {config_path} to {config_path}.bak")
     shutil.copy(config_path, f"{config_path}.bak")
@@ -227,7 +224,7 @@ def save_style_vectors_from_clustering(model_name: str, style_names_str: str):
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(json_dict, f, indent=2, ensure_ascii=False)
     logger.success(f"Updated {config_path}")
-    return f"成功!\n{style_vector_path}に保存し{config_path}を更新しました。"
+    return f"¡Éxito!\nGuardado en {style_vector_path} y actualizado {config_path}."
 
 
 def save_style_vectors_from_files(
@@ -236,7 +233,7 @@ def save_style_vectors_from_files(
     """音声ファイルからスタイルベクトルを作成して保存する"""
     global mean
     if len(x) == 0:
-        return "Error: スタイルベクトルを読み込んでください。"
+        return "Error: Por favor cargue los vectores de estilo."
     mean = np.mean(x, axis=0)
 
     result_dir = assets_root / model_name
@@ -244,17 +241,17 @@ def save_style_vectors_from_files(
     audio_files = [name.strip() for name in audio_files_str.split(",")]
     style_names = [name.strip() for name in style_names_str.split(",")]
     if len(audio_files) != len(style_names):
-        return f"音声ファイルとスタイル名の数が合いません。`,`で正しく{len(style_names)}個に区切られているか確認してください: {audio_files_str}と{style_names_str}"
+        return f"El número de archivos de audio y nombres de estilo no coincide. Verifique que estén separados por `,`: {audio_files_str} y {style_names_str}"
     style_name_list = [DEFAULT_STYLE] + style_names
     if len(set(style_names)) != len(style_names):
-        return "スタイル名が重複しています。"
+        return "Los nombres de estilo están duplicados."
     style_vectors = [mean]
 
     wavs_dir = dataset_root / model_name / "wavs"
     for audio_file in audio_files:
         path = wavs_dir / audio_file
         if not path.exists():
-            return f"{path}が存在しません。"
+            return f"{path} no existe."
         style_vectors.append(np.load(f"{path}.npy"))
     style_vectors = np.stack(style_vectors)
     assert len(style_name_list) == len(style_vectors)
@@ -267,7 +264,7 @@ def save_style_vectors_from_files(
     # config.jsonの更新
     config_path = result_dir / "config.json"
     if not config_path.exists():
-        return f"{config_path}が存在しません。"
+        return f"{config_path} no existe."
     logger.info(f"Backup {config_path} to {config_path}.bak")
     shutil.copy(config_path, f"{config_path}.bak")
 
@@ -279,14 +276,14 @@ def save_style_vectors_from_files(
 
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(json_dict, f, indent=2, ensure_ascii=False)
-    return f"成功!\n{style_vector_path}に保存し{config_path}を更新しました。"
+    return f"¡Éxito!\nGuardado en {style_vector_path} y actualizado {config_path}."
 
 
 def save_style_vectors_by_dirs(model_name: str, audio_dir_str: str):
     if model_name == "":
-        return "モデル名を入力してください。"
+        return "Ingrese el nombre del modelo."
     if audio_dir_str == "":
-        return "音声ファイルが入っているディレクトリを入力してください。"
+        return "Ingrese el directorio que contiene los archivos de audio."
 
     from concurrent.futures import ThreadPoolExecutor
     from multiprocessing import cpu_count
@@ -329,7 +326,7 @@ def save_style_vectors_by_dirs(model_name: str, audio_dir_str: str):
     result_dir = assets_root / model_name
     config_path = result_dir / "config.json"
     if not config_path.exists():
-        return f"{config_path}が存在しません。"
+        return f"{config_path} no existe."
     logger.info(f"Backup {config_path} to {config_path}.bak")
     shutil.copy(config_path, f"{config_path}.bak")
 
@@ -343,32 +340,32 @@ def save_style_vectors_by_dirs(model_name: str, audio_dir_str: str):
         config_path=config_path,
         config_output_path=config_path,
     )
-    return f"成功!\n{result_dir}にスタイルベクトルを保存しました。"
+    return f"¡Éxito!\nSe guardaron los vectores de estilo en {result_dir}."
 
 
 how_to_md = f"""
-Style-Bert-VITS2でこまかくスタイルを指定して音声合成するには、モデルごとにスタイルベクトルのファイル`style_vectors.npy`を作成する必要があります。
+Para especificar estilos detallados en Style-Bert-VITS2, es necesario crear un archivo de vectores de estilo `style_vectors.npy` para cada modelo.
 
-ただし、学習の過程では自動的に、平均スタイル「{DEFAULT_STYLE}」と、（**Ver 2.5.0以降からは**）音声をサブフォルダに分けていた場合はそのサブフォルダごとのスタイルが保存されています。
+Sin embargo, durante el proceso de entrenamiento, automáticamente se guarda el estilo promedio "{DEFAULT_STYLE}" y (**desde la Ver 2.5.0**) los estilos para cada subcarpeta si los audios estaban divididos en subcarpetas.
 
-## 方法
+## Métodos
 
-- 方法0: 音声を作りたいスタイルごとのサブフォルダに分け、そのフォルダごとにスタイルベクトルを作成
-- 方法1: 音声ファイルを自動でスタイル別に分け、その各スタイルの平均を取って保存
-- 方法2: スタイルを代表する音声ファイルを手動で選んで、その音声のスタイルベクトルを保存
-- 方法3: 自分でもっと頑張ってこだわって作る（JVNVコーパスなど、もともとスタイルラベル等が利用可能な場合はこれがよいかも）
+- Método 0: Dividir los audios en subcarpetas por estilo y crear vectores de estilo para cada carpeta.
+- Método 1: Dividir automáticamente los archivos de audio por estilo, tomar el promedio de cada estilo y guardarlo.
+- Método 2: Seleccionar manualmente archivos de audio representativos de un estilo y guardar sus vectores de estilo.
+- Método 3: Crear manualmente con más cuidado (si ya existen etiquetas de estilo como en el corpus JVNV, esto puede ser mejor).
 """
 
 method0 = """
-音声をスタイルごとにサブフォルダを作り、その中に音声ファイルを入れてください。
+Cree subcarpetas para cada estilo y coloque los archivos de audio dentro.
 
-**注意**
+**Nota**
 
-- Ver 2.5.0以降では、`inputs/`フォルダや`raw/`フォルダにサブディレクトリに分けて音声ファイルを入れるだけで、スタイルベクトルが自動で作成されるので、この手順は不要です。
-- それ未満のバージョンで学習したモデルに新しくスタイルベクトルをつけたい場合や、学習に使ったのとは別の音声でスタイルベクトルを作成したい場合に使います。
-- 学習との整合性のため、もし**現在学習中や、今後学習する予定がある場合は**、音声ファイルは、`Data/{モデル名}/wavs`フォルダではなく**新しい別のディレクトリに保存してください**。
+- Desde la Ver 2.5.0, si coloca los archivos de audio en subdirectorios dentro de `inputs/` o `raw/`, los vectores de estilo se crean automáticamente, por lo que este paso no es necesario.
+- Úselo si desea agregar nuevos vectores de estilo a un modelo entrenado en una versión anterior, o si desea crear vectores de estilo con audios diferentes a los usados en el entrenamiento.
+- Para mantener la consistencia con el entrenamiento, si **está entrenando o planea entrenar**, guarde los archivos de audio en **un directorio nuevo y separado**, no en la carpeta `Data/{nombre_del_modelo}/wavs`.
 
-例:
+Ejemplo:
 
 ```bash
 audio_dir
@@ -385,77 +382,77 @@ audio_dir
 """
 
 method1 = f"""
-学習の時に取り出したスタイルベクトルを読み込んで、可視化を見ながらスタイルを分けていきます。
+Cargue los vectores de estilo extraídos durante el entrenamiento y divida los estilos observando la visualización.
 
-手順:
-1. 図を眺める
-2. スタイル数を決める（平均スタイルを除く）
-3. スタイル分けを行って結果を確認
-4. スタイルの名前を決めて保存
+Pasos:
+1. Observar el gráfico.
+2. Decidir el número de estilos (excluyendo el estilo promedio).
+3. Ejecutar la clasificación de estilos y verificar el resultado.
+4. Nombrar los estilos y guardar.
 
 
-詳細: スタイルベクトル(256次元)たちを適当なアルゴリズムでクラスタリングして、各クラスタの中心のベクトル（と全体の平均ベクトル）を保存します。
+Detalle: Agrupa los vectores de estilo (256 dimensiones) con un algoritmo adecuado y guarda el vector central de cada grupo (y el vector promedio general).
 
-平均スタイル（{DEFAULT_STYLE}）は自動的に保存されます。
+El estilo promedio ({DEFAULT_STYLE}) se guarda automáticamente.
 """
 
 dbscan_md = """
-DBSCANという方法でスタイル分けを行います。
-こちらの方が方法1よりも特徴がはっきり出るもののみを取り出せ、よいスタイルベクトルが作れるかもしれません。
-ただし事前にスタイル数は指定できません。
+Realiza la clasificación de estilos utilizando el método DBSCAN.
+Esto puede extraer solo aquellos con características claras mejor que el Método 1, y podría crear mejores vectores de estilo.
+Sin embargo, no se puede especificar el número de estilos de antemano.
 
-パラメータ：
-- eps: この値より近い点同士をどんどん繋げて同じスタイル分類とする。小さいほどスタイル数が増え、大きいほどスタイル数が減る傾向。
-- min_samples: ある点をスタイルの核となる点とみなすために必要な近傍の点の数。小さいほどスタイル数が増え、大きいほどスタイル数が減る傾向。
+Parámetros:
+- eps: Los puntos más cercanos a este valor se conectan para formar la misma clasificación de estilo. Cuanto menor es, más estilos tiende a haber; cuanto mayor, menos estilos.
+- min_samples: Número de puntos vecinos necesarios para considerar un punto como núcleo de un estilo. Cuanto menor es, más estilos tiende a haber; cuanto mayor, menos estilos.
 
-UMAPの場合はepsは0.3くらい、t-SNEの場合は2.5くらいがいいかもしれません。min_samplesはデータ数に依存するのでいろいろ試してみてください。
+Para UMAP, eps alrededor de 0.3, y para t-SNE alrededor de 2.5 podría ser bueno. min_samples depende del número de datos, así que pruebe varios valores.
 
-詳細：
-https://ja.wikipedia.org/wiki/DBSCAN
+Detalles:
+https://es.wikipedia.org/wiki/DBSCAN
 """
 
 
 def create_style_vectors_app():
     with gr.Blocks(theme=GRADIO_THEME) as app:
-        with gr.Accordion("使い方", open=False):
+        with gr.Accordion("Cómo usar", open=False):
             gr.Markdown(how_to_md)
-        model_name = gr.Textbox(placeholder="your_model_name", label="モデル名")
-        with gr.Tab("方法0: サブフォルダごとにスタイルベクトルを作成"):
+        model_name = gr.Textbox(placeholder="nombre_de_su_modelo", label="Nombre del modelo")
+        with gr.Tab("Método 0: Crear vectores por subcarpeta"):
             gr.Markdown(method0)
             audio_dir = gr.Textbox(
-                placeholder="path/to/audio_dir",
-                label="音声が入っているフォルダ",
-                info="音声ファイルをスタイルごとにサブフォルダに分けて保存してください。",
+                placeholder="ruta/a/carpeta_de_audio",
+                label="Carpeta de audio",
+                info="Guarde los archivos de audio en subcarpetas separadas por estilo.",
             )
-            method0_btn = gr.Button("スタイルベクトルを作成", variant="primary")
-            method0_info = gr.Textbox(label="結果")
+            method0_btn = gr.Button("Crear vectores de estilo", variant="primary")
+            method0_info = gr.Textbox(label="Resultado")
             method0_btn.click(
                 save_style_vectors_by_dirs,
                 inputs=[model_name, audio_dir],
                 outputs=[method0_info],
             )
-        with gr.Tab("その他の方法"):
+        with gr.Tab("Otros métodos"):
             with gr.Row():
                 reduction_method = gr.Radio(
                     choices=["UMAP", "t-SNE"],
-                    label="次元削減方法",
-                    info="v 1.3以前はt-SNEでしたがUMAPのほうがよい可能性もあります。",
+                    label="Método de reducción de dimensión",
+                    info="Antes de v 1.3 era t-SNE, pero UMAP podría ser mejor.",
                     value="UMAP",
                 )
-                load_button = gr.Button("スタイルベクトルを読み込む", variant="primary")
-            output = gr.Plot(label="音声スタイルの可視化")
+                load_button = gr.Button("Cargar vectores de estilo", variant="primary")
+            output = gr.Plot(label="Visualización de estilos de voz")
             load_button.click(
                 load, inputs=[model_name, reduction_method], outputs=[output]
             )
-            with gr.Tab("方法1: スタイル分けを自動で行う"):
-                with gr.Tab("スタイル分け1"):
+            with gr.Tab("Método 1: Clasificación automática"):
+                with gr.Tab("Clasificación 1"):
                     n_clusters = gr.Slider(
                         minimum=2,
                         maximum=10,
                         step=1,
                         value=4,
-                        label="作るスタイルの数（平均スタイルを除く）",
-                        info="上の図を見ながらスタイルの数を試行錯誤してください。",
+                        label="Número de estilos a crear (excluyendo promedio)",
+                        info="Pruebe diferentes números mientras observa el gráfico.",
                     )
                     c_method = gr.Radio(
                         choices=[
@@ -464,12 +461,12 @@ def create_style_vectors_app():
                             "Agglomerative",
                             "KMeans",
                         ],
-                        label="アルゴリズム",
-                        info="分類する（クラスタリング）アルゴリズムを選択します。いろいろ試してみてください。",
+                        label="Algoritmo",
+                        info="Seleccione el algoritmo de clasificación (clustering). Pruebe varios.",
                         value="Agglomerative after reduction",
                     )
-                    c_button = gr.Button("スタイル分けを実行")
-                with gr.Tab("スタイル分け2: DBSCAN"):
+                    c_button = gr.Button("Ejecutar clasificación")
+                with gr.Tab("Clasificación 2: DBSCAN"):
                     gr.Markdown(dbscan_md)
                     eps = gr.Slider(
                         minimum=0.1,
@@ -486,11 +483,11 @@ def create_style_vectors_app():
                         label="min_samples",
                     )
                     with gr.Row():
-                        dbscan_button = gr.Button("スタイル分けを実行")
-                        num_styles_result = gr.Textbox(label="スタイル数")
-                gr.Markdown("スタイル分けの結果")
+                        dbscan_button = gr.Button("Ejecutar clasificación")
+                        num_styles_result = gr.Textbox(label="Número de estilos")
+                gr.Markdown("Resultado de la clasificación")
                 gr.Markdown(
-                    "注意: もともと256次元なものをを2次元に落としているので、正確なベクトルの位置関係ではありません。"
+                    "Nota: Se ha reducido de 256 dimensiones a 2, por lo que la relación de posición no es exacta."
                 )
                 with gr.Row():
                     gr_plot = gr.Plot()
@@ -501,17 +498,17 @@ def create_style_vectors_app():
                                 maximum=MAX_CLUSTER_NUM,
                                 step=1,
                                 value=1,
-                                label="スタイル番号",
-                                info="選択したスタイルの代表音声を表示します。",
+                                label="Número de estilo",
+                                info="Muestra el audio representativo del estilo seleccionado.",
                             )
                             num_files = gr.Slider(
                                 minimum=1,
                                 maximum=MAX_AUDIO_NUM,
                                 step=1,
                                 value=5,
-                                label="代表音声の数をいくつ表示するか",
+                                label="Cuántos audios representativos mostrar",
                             )
-                            get_audios_button = gr.Button("代表音声を取得")
+                            get_audios_button = gr.Button("Obtener audios representativos")
                         with gr.Row():
                             audio_list = []
                             for i in range(MAX_AUDIO_NUM):
@@ -534,44 +531,44 @@ def create_style_vectors_app():
                         inputs=[cluster_index, num_files],
                         outputs=audio_list,
                     )
-                gr.Markdown("結果が良さそうなら、これを保存します。")
+                gr.Markdown("Si el resultado parece bueno, guárdelo.")
                 style_names = gr.Textbox(
-                    "Angry, Sad, Happy",
-                    label="スタイルの名前",
-                    info=f"スタイルの名前を`,`で区切って入力してください（日本語可）。例: `Angry, Sad, Happy`や`怒り, 悲しみ, 喜び`など。平均音声は{DEFAULT_STYLE}として自動的に保存されます。",
+                    "Enojo, Tristeza, Felicidad",
+                    label="Nombres de los estilos",
+                    info=f"Ingrese los nombres de los estilos separados por `,`. Ejemplo: `Enojo, Tristeza, Felicidad`. El audio promedio se guarda automáticamente como {DEFAULT_STYLE}.",
                 )
                 with gr.Row():
                     save_button1 = gr.Button(
-                        "スタイルベクトルを保存", variant="primary"
+                        "Guardar vectores de estilo", variant="primary"
                     )
-                    info2 = gr.Textbox(label="保存結果")
+                    info2 = gr.Textbox(label="Resultado de guardado")
 
                 save_button1.click(
                     save_style_vectors_from_clustering,
                     inputs=[model_name, style_names],
                     outputs=[info2],
                 )
-            with gr.Tab("方法2: 手動でスタイルを選ぶ"):
+            with gr.Tab("Método 2: Selección manual"):
                 gr.Markdown(
-                    "下のテキスト欄に、各スタイルの代表音声のファイル名を`,`区切りで、その横に対応するスタイル名を`,`区切りで入力してください。"
+                    "Ingrese los nombres de archivo de los audios representativos de cada estilo separados por `,`, y los nombres de estilo correspondientes separados por `,`."
                 )
-                gr.Markdown("例: `angry.wav, sad.wav, happy.wav`と`Angry, Sad, Happy`")
+                gr.Markdown("Ejemplo: `angry.wav, sad.wav, happy.wav` y `Enojo, Tristeza, Felicidad`")
                 gr.Markdown(
-                    f"注意: {DEFAULT_STYLE}スタイルは自動的に保存されます、手動では{DEFAULT_STYLE}という名前のスタイルは指定しないでください。"
+                    f"Nota: El estilo {DEFAULT_STYLE} se guarda automáticamente, no especifique un estilo con ese nombre manualmente."
                 )
                 with gr.Row():
                     audio_files_text = gr.Textbox(
-                        label="音声ファイル名",
+                        label="Nombres de archivos de audio",
                         placeholder="angry.wav, sad.wav, happy.wav",
                     )
                     style_names_text = gr.Textbox(
-                        label="スタイル名", placeholder="Angry, Sad, Happy"
+                        label="Nombres de estilos", placeholder="Enojo, Tristeza, Felicidad"
                     )
                 with gr.Row():
                     save_button2 = gr.Button(
-                        "スタイルベクトルを保存", variant="primary"
+                        "Guardar vectores de estilo", variant="primary"
                     )
-                    info2 = gr.Textbox(label="保存結果")
+                    info2 = gr.Textbox(label="Resultado de guardado")
                     save_button2.click(
                         save_style_vectors_from_files,
                         inputs=[model_name, audio_files_text, style_names_text],
