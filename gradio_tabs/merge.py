@@ -13,6 +13,7 @@ from style_bert_vits2.constants import DEFAULT_STYLE, GRADIO_THEME
 from style_bert_vits2.logging import logger
 from style_bert_vits2.tts_model import TTSModel, TTSModelHolder
 from style_bert_vits2.utils import torch_device_to_onnx_providers
+from gradio_tabs.common import create_no_model_alert
 
 
 voice_keys = ["dec"]
@@ -1023,11 +1024,7 @@ def create_merge_app(model_holder: TTSModelHolder) -> gr.Blocks:
         logger.error(
             f"No se encontraron modelos. Por favor coloque los modelos en {assets_root}."
         )
-        with gr.Blocks() as app:
-            gr.Markdown(
-                f"Error: No se encontraron modelos. Por favor coloque los modelos en {assets_root}."
-            )
-        return app
+        return create_no_model_alert(assets_root)
     initial_id = 0
     initial_model_files = [
         str(f) for f in model_holder.model_files_dict[model_names[initial_id]]

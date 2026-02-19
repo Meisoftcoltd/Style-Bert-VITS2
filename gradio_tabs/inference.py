@@ -25,6 +25,7 @@ from style_bert_vits2.nlp.japanese.g2p_utils import g2kata_tone, kata_tone2phone
 from style_bert_vits2.nlp.japanese.normalizer import normalize_text
 from style_bert_vits2.tts_model import NullModelParam, TTSModelHolder
 from style_bert_vits2.utils import torch_device_to_onnx_providers
+from gradio_tabs.common import create_no_model_alert
 
 
 # pyopenjtalk_worker を起動
@@ -347,11 +348,7 @@ def create_inference_app(model_holder: TTSModelHolder) -> gr.Blocks:
         logger.error(
             f"No se encontraron modelos. Por favor coloque los modelos en {model_holder.root_dir}."
         )
-        with gr.Blocks() as app:
-            gr.Markdown(
-                f"Error: No se encontraron modelos. Por favor coloque los modelos en {model_holder.root_dir}."
-            )
-        return app
+        return create_no_model_alert(model_holder.root_dir)
     initial_id = 0
     initial_pth_files = get_model_files(model_names[initial_id])
 
