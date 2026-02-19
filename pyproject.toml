@@ -37,6 +37,7 @@ dependencies = [
     "pypinyin",
     "pyworld-prebuilt",
     "safetensors",
+    "soxr",
     "transformers",
 ]
 

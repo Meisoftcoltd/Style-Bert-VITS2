@@ -26,6 +26,7 @@ pyloudnorm
 pyopenjtalk-dict
 pypinyin
 pyworld-prebuilt
+soxr
 stable_ts
 tensorboard
 torch>=2.4

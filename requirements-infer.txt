@@ -24,9 +24,10 @@ pyannote.audio>=3.1.0
 pyopenjtalk-dict
 pypinyin
 pyworld-prebuilt
+soxr
 # stable_ts
 # tensorboard
-torch<2.4
-torchaudio<2.4
+torch>=2.4
+torchaudio>=2.4
 transformers
 umap-learn
