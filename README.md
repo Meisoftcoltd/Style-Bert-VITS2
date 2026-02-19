@@ -1,6 +1,8 @@
-# Style-Bert-VITS2
+# Style-Bert-VITS2 (Versión en Español)
 
 **Por favor, asegúrese de leer los [Términos de uso y las Peticiones](/docs/TERMS_OF_USE.md) antes de usar.**
+
+Esta es una adaptación completa al español del repositorio original Style-Bert-VITS2.
 
 Bert-VITS2 con estilos de voz más controlables.
 
@@ -33,7 +35,14 @@ Puede instalarlo vía `pip install style-bert-vits2` (solo inferencia), vea [lib
 
 Este repositorio se basa en [Bert-VITS2](https://github.com/fishaudio/Bert-VITS2) v2.1 y Japanese-Extra, ¡muchas gracias al autor original!
 
-**Resumen**
+**Resumen de la Adaptación al Español**
+
+- **Adaptación completa al español:** Traducción de menús, logs y documentación.
+- **Soporte de lenguaje:** Implementación de G2P (Grapheme-to-Phoneme) para español usando la librería `gruut`.
+- **Modelo BERT:** Se utiliza `PlanTL-GOB-ES/roberta-large-bne` como modelo BERT base para español, aprovechando su alta calidad y compatibilidad dimensional (1024 hidden size) con la arquitectura "Extra".
+- **Entrenamiento Optimizado:** Se ha creado un script de entrenamiento específico (`train_ms_es_extra.py`) adaptado del original japonés, permitiendo entrenar modelos mono-hablante o multi-hablante en español con alta calidad.
+
+**Resumen General**
 
 - Basado en Bert-VITS2 v2.1 y Japanese-Extra, que genera voz expresiva basada en el contenido del texto de entrada, permitiendo controlar libremente la emoción y el estilo de habla con intensidad.
 - Incluso si no tiene Git o Python (para usuarios de Windows), puede instalar y entrenar fácilmente (tomado en gran parte de [EasyBertVits2](https://github.com/Zuntan03/EasyBertVits2/)). También soporta entrenamiento en Google Colab.
@@ -53,8 +62,6 @@ Este repositorio se basa en [Bert-VITS2](https://github.com/fishaudio/Bert-VITS2
 Se ha confirmado el funcionamiento de cada UI y API Server en Símbolo del sistema de Windows, WSL2 y Linux (Ubuntu Desktop). Si no tiene una GPU NVidia, no puede entrenar, pero puede realizar síntesis de voz y fusión.
 
 ### Instalación
-
-Consulte [library.ipynb](/library.ipynb) para la instalación y uso como librería Python con pip.
 
 #### Para quienes no están familiarizados con Git o Python
 
@@ -86,6 +93,9 @@ uv pip install -r requirements.txt
 python initialize.py  # Descarga modelos necesarios y el modelo TTS predeterminado
 ```
 No olvide el último paso.
+
+**Nota para usuarios de la versión en Español:**
+Este repositorio incluye dependencias adicionales para el soporte de español (`gruut`, `gruut-lang-es`, `num2words`). Asegúrese de instalar `requirements.txt` completo.
 
 ### Síntesis de voz
 
@@ -131,6 +141,7 @@ Para el entrenamiento se necesitan varios archivos de audio de 2-14 segundos y s
 #### WebUI de Entrenamiento
 
 - Siga las instrucciones en la pestaña "Entrenamiento" de la WebUI (`App.bat` o `python app.py`). O use `Train.bat`.
+- **Modo Español:** Al usar la WebUI, la opción "Usar versión Extra" activará automáticamente el entrenamiento optimizado para español (`train_ms_es_extra.py`) si está trabajando en este entorno adaptado. Esto utiliza una arquitectura de BERT único (solo español) para maximizar la calidad.
 
 ### Generación de estilos
 
