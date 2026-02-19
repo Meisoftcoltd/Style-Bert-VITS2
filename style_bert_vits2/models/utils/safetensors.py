@@ -6,6 +6,14 @@ from safetensors import safe_open
 from safetensors.torch import save_file
 
 from style_bert_vits2.logging import logger
+from style_bert_vits2.nlp.symbols import (
+    ZH_SYMBOLS,
+    JP_SYMBOLS,
+    EN_SYMBOLS,
+    PAD,
+    PUNCTUATION_SYMBOLS,
+    SYMBOLS,
+)
 
 
 def load_safetensors(
@@ -33,6 +41,72 @@ def load_safetensors(
             if key == "iteration":
                 iteration = f.get_tensor(key).item()
             tensors[key] = f.get_tensor(key)
+
+    # Check for JP-Extra (112 symbols) to Spanish-Extra (122 symbols) mismatch
+    if "enc_p.emb.weight" in tensors:
+        loaded_emb_shape = tensors["enc_p.emb.weight"].shape
+
+        # Access the real model if wrapped (e.g. DataParallel)
+        real_model = model.module if hasattr(model, "module") else model
+
+        # We need to check if enc_p exists (it should for SynthesizerTrn)
+        if hasattr(real_model, "enc_p"):
+            expected_emb_shape = real_model.enc_p.emb.weight.shape
+            expected_tone_shape = real_model.enc_p.tone_emb.weight.shape
+            expected_lang_shape = real_model.enc_p.language_emb.weight.shape
+
+            current_emb_weight = real_model.enc_p.emb.weight
+            current_tone_weight = real_model.enc_p.tone_emb.weight
+            current_lang_weight = real_model.enc_p.language_emb.weight
+
+            if loaded_emb_shape != expected_emb_shape:
+                # Reconstruct old symbols (assuming standard JP-Extra configuration: ZH+JP+EN)
+                old_normal = sorted(set(ZH_SYMBOLS + JP_SYMBOLS + EN_SYMBOLS))
+                old_symbols = [PAD] + old_normal + PUNCTUATION_SYMBOLS
+
+                if loaded_emb_shape[0] == len(old_symbols):
+                    logger.info(f"Adapting enc_p.emb.weight from old checkpoint format ({loaded_emb_shape[0]} -> {expected_emb_shape[0]})...")
+
+                    loaded_weight = tensors["enc_p.emb.weight"]
+                    # Create new weight tensor initialized from current model (random or pre-trained)
+                    # Ensure it is on the same device as loaded_weight
+                    new_emb_weight = current_emb_weight.to(loaded_weight.device).clone()
+
+                    # Map old to new
+                    mapped_count = 0
+                    for i, sym in enumerate(old_symbols):
+                        if sym in SYMBOLS:
+                            new_idx = SYMBOLS.index(sym)
+                            new_emb_weight[new_idx] = loaded_weight[i]
+                            mapped_count += 1
+                        else:
+                            logger.warning(f"Symbol {sym} from checkpoint not found in current SYMBOLS!")
+
+                    logger.info(f"Mapped {mapped_count} symbols.")
+                    tensors["enc_p.emb.weight"] = new_emb_weight
+                else:
+                    logger.warning(f"Loaded enc_p.emb.weight shape {loaded_emb_shape} does not match expected {expected_emb_shape} and is not recognized as standard JP-Extra format (112). Skipping adaptation.")
+
+            # Adapt tone embeddings
+            if "enc_p.tone_emb.weight" in tensors:
+                loaded_tone_shape = tensors["enc_p.tone_emb.weight"].shape
+                if loaded_tone_shape != expected_tone_shape:
+                    if loaded_tone_shape[0] < expected_tone_shape[0]:
+                        logger.info(f"Adapting enc_p.tone_emb.weight from old checkpoint format ({loaded_tone_shape[0]} -> {expected_tone_shape[0]})...")
+                        new_tone_weight = current_tone_weight.to(tensors["enc_p.tone_emb.weight"].device).clone()
+                        new_tone_weight[:loaded_tone_shape[0]] = tensors["enc_p.tone_emb.weight"]
+                        tensors["enc_p.tone_emb.weight"] = new_tone_weight
+
+            # Adapt language embeddings
+            if "enc_p.language_emb.weight" in tensors:
+                loaded_lang_shape = tensors["enc_p.language_emb.weight"].shape
+                if loaded_lang_shape != expected_lang_shape:
+                    if loaded_lang_shape[0] < expected_lang_shape[0]:
+                        logger.info(f"Adapting enc_p.language_emb.weight from old checkpoint format ({loaded_lang_shape[0]} -> {expected_lang_shape[0]})...")
+                        new_lang_weight = current_lang_weight.to(tensors["enc_p.language_emb.weight"].device).clone()
+                        new_lang_weight[:loaded_lang_shape[0]] = tensors["enc_p.language_emb.weight"]
+                        tensors["enc_p.language_emb.weight"] = new_lang_weight
+
     if hasattr(model, "module"):
         result = model.module.load_state_dict(tensors, strict=False)
     else:
@@ -68,7 +142,7 @@ def save_safetensors(
         iteration (int): イテレーション回数
         checkpoint_path (Union[str, Path]): 保存先のパス
         is_half (bool): モデルを半精度で保存するかどうかのフラグ
-        for_infer (bool): 推論用に保存するかどうかのフラグ
+        for_infer (bool): 推論用に読み込むかどうかのフラグ
     """
 
     if hasattr(model, "module"):
