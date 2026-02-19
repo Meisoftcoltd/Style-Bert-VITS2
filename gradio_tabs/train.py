@@ -495,7 +495,7 @@ style1/baz.wav|maria|ES|Hoy hace buen tiempo.
 
 
 def create_train_app():
-    with gr.Blocks(theme=GRADIO_THEME).queue() as app:
+    with gr.Blocks().queue() as app:
         gr.Markdown(change_log_md)
         with gr.Accordion("Cómo usar", open=False):
             gr.Markdown(how_to_md)

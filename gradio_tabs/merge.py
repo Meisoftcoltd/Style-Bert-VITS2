@@ -1030,7 +1030,7 @@ def create_merge_app(model_holder: TTSModelHolder) -> gr.Blocks:
         str(f) for f in model_holder.model_files_dict[model_names[initial_id]]
     ]
 
-    with gr.Blocks(theme=GRADIO_THEME) as app:
+    with gr.Blocks() as app:
         gr.Markdown(
             "Puede crear nuevos modelos mezclando, restando o intercambiando voz, forma de hablar y velocidad de múltiples modelos Style-Bert-VITS2."
         )

@@ -49,7 +49,7 @@ def create_onnx_app(model_holder: TTSModelHolder) -> gr.Blocks:
     initial_id = 0
     initial_pth_files = get_model_files(model_names[initial_id])
 
-    with gr.Blocks(theme=GRADIO_THEME) as app:
+    with gr.Blocks() as app:
         gr.Markdown(initial_md)
         with gr.Row():
             with gr.Column():
