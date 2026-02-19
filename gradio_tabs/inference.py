@@ -352,9 +352,9 @@ def create_inference_app(model_holder: TTSModelHolder) -> gr.Blocks:
     initial_id = 0
     initial_pth_files = get_model_files(model_names[initial_id])
 
-    with gr.Blocks(theme=GRADIO_THEME) as app:
-        gr.Markdown(initial_md)
-        gr.Markdown(terms_of_use_md)
+    with gr.Blocks() as app:
+        # gr.Markdown(initial_md)
+        # gr.Markdown(terms_of_use_md)
         null_models = gr.State({})
         force_reload_model = gr.State(False)
         with gr.Accordion(label="Cómo usar", open=False):

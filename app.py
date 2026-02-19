@@ -49,7 +49,7 @@ model_holder = TTSModelHolder(
     ignore_onnx=True,
 )
 
-with gr.Blocks(theme=GRADIO_THEME) as app:
+with gr.Blocks() as app:
     gr.Markdown(f"# Style-Bert-VITS2 WebUI (versión {VERSION})")
     with gr.Tabs():
         with gr.Tab("Síntesis de Voz"):
@@ -70,4 +70,5 @@ app.launch(
     server_port=args.port,
     inbrowser=not args.no_autolaunch,
     share=args.share,
+    theme=GRADIO_THEME,
 )

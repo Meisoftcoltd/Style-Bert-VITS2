@@ -115,7 +115,7 @@ Es mejor tener una duración total razonable, se ha informado que incluso 10 min
 
 
 def create_dataset_app() -> gr.Blocks:
-    with gr.Blocks(theme=GRADIO_THEME) as app:
+    with gr.Blocks() as app:
         gr.Markdown(
             "**Si ya tiene una colección de archivos de audio de 2-12 segundos y sus datos de transcripción, puede entrenar sin usar esta pestaña.**"
         )

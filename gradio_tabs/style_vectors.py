@@ -413,7 +413,7 @@ https://es.wikipedia.org/wiki/DBSCAN
 
 
 def create_style_vectors_app():
-    with gr.Blocks(theme=GRADIO_THEME) as app:
+    with gr.Blocks() as app:
         with gr.Accordion("Cómo usar", open=False):
             gr.Markdown(how_to_md)
         model_name = gr.Textbox(placeholder="nombre_de_su_modelo", label="Nombre del modelo")
