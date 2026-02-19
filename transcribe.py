@@ -12,26 +12,6 @@ from style_bert_vits2.logging import logger
 from style_bert_vits2.utils.stdout_wrapper import SAFE_STDOUT
 
 
-# faster-whisperは並列処理しても速度が向上しないので、単一モデルでループ処理する
-def transcribe_with_faster_whisper(
-    model: "WhisperModel",
-    audio_file: Path,
-    initial_prompt: Optional[str] = None,
-    language: str = "ja",
-    num_beams: int = 1,
-    no_repeat_ngram_size: int = 10,
-):
-    segments, _ = model.transcribe(
-        str(audio_file),
-        beam_size=num_beams,
-        language=language,
-        initial_prompt=initial_prompt,
-        no_repeat_ngram_size=no_repeat_ngram_size,
-    )
-    texts = [segment.text for segment in segments]
-    return "".join(texts)
-
-
 # HF pipelineで進捗表示をするために必要なDatasetクラス
 class StrListDataset(Dataset[str]):
     def __init__(self, original_list: list[str]) -> None:
@@ -49,6 +29,9 @@ def transcribe_files_with_hf_whisper(
     audio_files: list[Path],
     model_id: str,
     output_file: Path,
+    input_dir: Path,
+    dataset_model_name: str,
+    language_id: int,
     initial_prompt: Optional[str] = None,
     language: str = "ja",
     batch_size: int = 16,
@@ -60,7 +43,6 @@ def transcribe_files_with_hf_whisper(
     import torch
     from transformers import WhisperProcessor, pipeline
 
-    processor: WhisperProcessor = WhisperProcessor.from_pretrained(model_id)
     generate_kwargs: dict[str, Any] = {
         "language": language,
         "do_sample": False,
@@ -80,8 +62,8 @@ def transcribe_files_with_hf_whisper(
     )
     logger.info("Loaded pipeline")
     if initial_prompt is not None:
-        prompt_ids: torch.Tensor = pipe.tokenizer.get_prompt_ids(
-            initial_prompt, return_tensors="pt"
+        prompt_ids: torch.Tensor = pipe.tokenizer.encode(
+            initial_prompt, add_special_tokens=False, return_tensors="pt"
         ).to(device)
         generate_kwargs["prompt_ids"] = prompt_ids
 
@@ -96,13 +78,10 @@ def transcribe_files_with_hf_whisper(
         # cf. https://github.com/huggingface/transformers/issues/27594
         if text.startswith(f" {initial_prompt}"):
             text = text[len(f" {initial_prompt}") :]
-        # with open(output_file, "w", encoding="utf-8") as f:
-        #     for wav_file, text in zip(wav_files, results):
-        #         wav_rel_path = wav_file.relative_to(input_dir)
-        #         f.write(f"{wav_rel_path}|{model_name}|{language_id}|{text}\n")
+
         with open(output_file, "a", encoding="utf-8") as f:
             wav_rel_path = file.relative_to(input_dir)
-            f.write(f"{wav_rel_path}|{model_name}|{language_id}|{text}\n")
+            f.write(f"{wav_rel_path}|{dataset_model_name}|{language_id}|{text}\n")
         results.append(text)
         if pbar is not None:
             pbar.update(1)
@@ -127,7 +106,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="large-v3")
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--compute_type", type=str, default="bfloat16")
-    parser.add_argument("--use_hf_whisper", action="store_true")
+    parser.add_argument("--use_hf_whisper", action="store_true", help="Deprecated, always true")
     parser.add_argument("--hf_repo_id", type=str, default="")
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_beams", type=int, default=1)
@@ -137,10 +116,10 @@ if __name__ == "__main__":
     path_config = get_path_config()
     dataset_root = path_config.dataset_root
 
-    model_name = str(args.model_name)
+    dataset_model_name = str(args.model_name)
 
-    input_dir = dataset_root / model_name / "raw"
-    output_file = dataset_root / model_name / "esd.list"
+    input_dir = dataset_root / dataset_model_name / "raw"
+    output_file = dataset_root / dataset_model_name / "esd.list"
     initial_prompt: str = args.initial_prompt
     initial_prompt = initial_prompt.strip('"')
     language: str = args.language
@@ -176,48 +155,43 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"{language} is not supported.")
 
-    if not args.use_hf_whisper:
-        from faster_whisper import WhisperModel
+    # Model selection logic
+    model_id = args.hf_repo_id
+    if not model_id:
+        if args.model == "large-v3":
+            model_id = "openai/whisper-large-v3"
+        elif args.model == "large-v2":
+            model_id = "openai/whisper-large-v2"
+        elif args.model == "large":
+            model_id = "openai/whisper-large"
+        elif args.model == "medium":
+            model_id = "openai/whisper-medium"
+        elif args.model == "small":
+            model_id = "openai/whisper-small"
+        elif args.model == "base":
+            model_id = "openai/whisper-base"
+        elif args.model == "tiny":
+            model_id = "openai/whisper-tiny"
+        else:
+            model_id = args.model # Fallback
+            logger.warning(f"Using {model_id} as HF model ID directly. Ensure this is a valid repo ID or path.")
 
-        logger.info(
-            f"Loading faster-whisper model ({args.model}) with compute_type={compute_type}"
-        )
-        try:
-            model = WhisperModel(args.model, device=device, compute_type=compute_type)
-        except ValueError as e:
-            logger.warning(f"Failed to load model, so use `auto` compute_type: {e}")
-            model = WhisperModel(args.model, device=device)
-        for wav_file in tqdm(wav_files, file=SAFE_STDOUT, dynamic_ncols=True):
-            text = transcribe_with_faster_whisper(
-                model=model,
-                audio_file=wav_file,
-                initial_prompt=initial_prompt,
-                language=language,
-                num_beams=num_beams,
-                no_repeat_ngram_size=no_repeat_ngram_size,
-            )
-            wav_rel_path = wav_file.relative_to(input_dir)
-            with open(output_file, "a", encoding="utf-8") as f:
-                f.write(f"{wav_rel_path}|{model_name}|{language_id}|{text}\n")
-    else:
-        model_id = args.hf_repo_id
-        logger.info(f"Loading HF Whisper model ({model_id})")
-        pbar = tqdm(total=len(wav_files), file=SAFE_STDOUT, dynamic_ncols=True)
-        results = transcribe_files_with_hf_whisper(
-            audio_files=wav_files,
-            model_id=model_id,
-            initial_prompt=initial_prompt,
-            language=language,
-            batch_size=batch_size,
-            num_beams=num_beams,
-            no_repeat_ngram_size=no_repeat_ngram_size,
-            device=device,
-            pbar=pbar,
-            output_file=output_file,
-        )
-        # with open(output_file, "w", encoding="utf-8") as f:
-        #     for wav_file, text in zip(wav_files, results):
-        #         wav_rel_path = wav_file.relative_to(input_dir)
-        #         f.write(f"{wav_rel_path}|{model_name}|{language_id}|{text}\n")
+    logger.info(f"Loading HF Whisper model ({model_id})")
+    pbar = tqdm(total=len(wav_files), file=SAFE_STDOUT, dynamic_ncols=True)
+    results = transcribe_files_with_hf_whisper(
+        audio_files=wav_files,
+        model_id=model_id,
+        output_file=output_file,
+        input_dir=input_dir,
+        dataset_model_name=dataset_model_name,
+        language_id=language_id,
+        initial_prompt=initial_prompt,
+        language=language,
+        batch_size=batch_size,
+        num_beams=num_beams,
+        no_repeat_ngram_size=no_repeat_ngram_size,
+        device=device,
+        pbar=pbar,
+    )
 
     sys.exit(0)
