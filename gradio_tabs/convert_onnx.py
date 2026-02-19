@@ -6,6 +6,7 @@ from style_bert_vits2.constants import GRADIO_THEME
 from style_bert_vits2.logging import logger
 from style_bert_vits2.tts_model import NullModelParam, TTSModelHolder
 from style_bert_vits2.utils.subprocess import run_script_with_log
+from gradio_tabs.common import create_no_model_alert
 
 
 def call_convert_onnx(
@@ -44,11 +45,7 @@ def create_onnx_app(model_holder: TTSModelHolder) -> gr.Blocks:
         logger.error(
             f"No se encontraron modelos. Por favor coloque los modelos en {model_holder.root_dir}."
         )
-        with gr.Blocks() as app:
-            gr.Markdown(
-                f"Error: No se encontraron modelos. Por favor coloque los modelos en {model_holder.root_dir}."
-            )
-        return app
+        return create_no_model_alert(model_holder.root_dir)
     initial_id = 0
     initial_pth_files = get_model_files(model_names[initial_id])
 
