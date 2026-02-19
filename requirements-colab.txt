@@ -19,6 +19,7 @@ pyloudnorm
 pyopenjtalk-dict
 pypinyin
 pyworld-prebuilt
+soxr
 torch
 torchaudio
 torchvision
